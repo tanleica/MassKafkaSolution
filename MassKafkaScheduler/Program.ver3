@@ -1,0 +1,60 @@
+using System;
+using System.Threading.Tasks;
+using Confluent.Kafka;
+using MassTransit;
+using MassTransit.KafkaIntegration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using MassKafkaScheduler.Models;
+
+namespace MassKafkaScheduler
+{
+    class Program
+    {
+        static async Task Main()
+        {
+            Console.WriteLine(" [*] MassKafkaScheduler Started...");
+
+            // ✅ Set up Dependency Injection
+            var services = new ServiceCollection();
+            services.AddMassTransit(x =>
+            {
+                x.UsingInMemory(); // ✅ Use InMemory as transport (needed for Kafka)
+
+                x.AddRider(rider =>
+                {
+                    rider.AddProducer<OutboxMessage>("outbox-topic"); // ✅ Register Kafka Producer
+
+                    rider.UsingKafka((context, kafka) =>
+                    {
+                        kafka.Host("159.223.59.17:9092"); // ✅ Kafka Broker
+                    });
+                });
+            });
+
+            var serviceProvider = services.BuildServiceProvider();
+            var busControl = serviceProvider.GetRequiredService<IBusControl>();
+            var kafkaRider = serviceProvider.GetRequiredService<IKafkaRider>();
+
+            // ✅ Start Kafka Rider before sending messages
+            await busControl.StartAsync();
+            kafkaRider.Start(); // 🚀 Explicitly start the Kafka Rider
+
+            var producer = serviceProvider.GetRequiredService<ITopicProducer<OutboxMessage>>();
+
+            while (true)
+            {
+                await Task.Delay(TimeSpan.FromHours(1)); // 🔹 Produces every hour
+
+                var message = new OutboxMessage
+                {
+                    UserId = "b2e05ec4-6022-4f35-baea-ceb7fa2ee9dd",
+                    Message = $"Mass test message at {DateTime.UtcNow}"
+                };
+
+                await producer.Produce(message); // ✅ Send to Kafka
+                Console.WriteLine($" [✔] Sent to Kafka: {message.Message}");
+            }
+        }
+    }
+}

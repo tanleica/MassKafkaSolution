@@ -1,0 +1,49 @@
+using System;
+using System.Threading.Tasks;
+using MassTransit;
+using MassTransit.KafkaIntegration;
+using Microsoft.Extensions.DependencyInjection;
+using MassKafkaScheduler.Models;
+using Confluent.Kafka;
+
+namespace MassKafkaScheduler
+{
+    class Program
+    {
+        static async Task Main()
+        {
+            Console.WriteLine(" [*] MassKafkaScheduler Started...");
+
+            var services = new ServiceCollection();
+            services.AddMassTransit(x =>
+            {
+                x.AddRider(rider =>
+                {
+                    rider.AddProducer<Null, OutboxMessage>("outbox-topic"); // ✅ Register Kafka Producer
+
+                    rider.UsingKafka((context, kafka) => // ✅ Corrected
+                    {
+                        kafka.Host("159.223.59.17:9092"); // ✅ Corrected (expects a string, not ClientConfig)
+                    });
+                });
+            });
+
+            var serviceProvider = services.BuildServiceProvider();
+            var producer = serviceProvider.GetRequiredService<ITopicProducer<Null, OutboxMessage>>();
+
+            while (true)
+            {
+                await Task.Delay(TimeSpan.FromHours(1)); // 🔹 Produces every hour
+
+                var message = new OutboxMessage
+                {
+                    UserId = "b2e05ec4-6022-4f35-baea-ceb7fa2ee9dd",
+                    Message = $"Mass test message at {DateTime.UtcNow}"
+                };
+
+                await producer.Produce(default, message);
+                Console.WriteLine($" [✔] Sent to Kafka: {message.Message}");
+            }
+        }
+    }
+}
