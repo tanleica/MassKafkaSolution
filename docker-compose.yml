@@ -1,0 +1,18 @@
+services:
+  # ✅ MassKafkaScheduler Service
+  scheduler:
+    image: masskafka-scheduler
+    container_name: masskafka_scheduler
+    restart: always
+    build:
+      context: .
+      dockerfile: Dockerfile.scheduler
+
+  # ✅ MassKafkaConsumer Service
+  consumer:
+    image: masskafka-consumer
+    container_name: masskafka_consumer
+    restart: always
+    build:
+      context: .
+      dockerfile: Dockerfile.consumer

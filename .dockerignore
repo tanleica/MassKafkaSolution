@@ -1,0 +1,8 @@
+MassKafkaScheduler/obj
+MassKafkaScheduler/bin
+MassKafkaConsumer/obj
+MassKafkaConsumer/bin
+.dockerignore
+.gitignore
+docker-compose.yml
+Dockerfile

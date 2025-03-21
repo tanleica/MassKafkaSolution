@@ -1,0 +1,28 @@
+# ✅ Build Stage
+FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build-stage
+
+WORKDIR /src
+
+# ✅ Copy only the required project file
+COPY MassKafkaConsumer/MassKafkaConsumer.csproj ./
+
+# ✅ Restore dependencies
+RUN dotnet restore MassKafkaConsumer.csproj --verbosity minimal
+
+# ✅ Copy all source files
+COPY MassKafkaConsumer/. .
+
+# ✅ Build and publish
+RUN dotnet build MassKafkaConsumer.csproj -c Release --no-restore
+RUN dotnet publish MassKafkaConsumer.csproj -c Release -o /app/publish --no-build
+
+# ✅ Runtime Stage
+FROM mcr.microsoft.com/dotnet/runtime:9.0 AS runtime
+
+WORKDIR /app
+
+# ✅ Copy the published files
+COPY --from=build-stage /app/publish ./
+
+# ✅ Run the Consumer
+ENTRYPOINT ["dotnet", "MassKafkaConsumer.dll"]
